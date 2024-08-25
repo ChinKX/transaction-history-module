@@ -73,4 +73,4 @@ This is one way to run your app — you can also run it directly from within And
 
 ## Additional feature:
 
-- The app will blur the screen after 15s of inactivity and auto log out after another 15s (total 30s).
+- The app will blur the screen after 15s of inactivity and auto log out after another 15s of inactivity (total 30s).
