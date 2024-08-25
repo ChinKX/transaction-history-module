@@ -3,15 +3,25 @@ import {ScrollView, StyleSheet, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {AppScreenParamsList} from './App';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {rnBiometrics} from '../stores/rn-biometrics';
 import {IconButton, Text} from 'react-native-paper';
+import {useAuthStore} from '../stores/auth';
+import {FixedPositionedError} from './shared/fixed-positioned-error';
 
 export const TransactionDetailScreen: React.FunctionComponent<
   Props
 > = props => {
   const {transaction} = props.route.params;
   const insets = useSafeAreaInsets();
+  const [, {simpleAuthenticate}] = useAuthStore();
   const [isAmountVisible, setIsAmountVisible] = React.useState(false);
+  const [error, setError] = React.useState<string | undefined>();
+
+  React.useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(undefined), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const toggleAmountVisibility = async () => {
     try {
@@ -19,20 +29,18 @@ export const TransactionDetailScreen: React.FunctionComponent<
         setIsAmountVisible(false);
         return;
       }
-      const {success, error} = await rnBiometrics.simplePrompt({
-        promptMessage: 'View transaction amount',
-      });
-      if (error) {
-        throw new Error(error);
-      }
-      if (success) {
-        console.log('Successful biometrics provided');
+      const result = await simpleAuthenticate();
+      if (result.type === 'success') {
         setIsAmountVisible(true);
       } else {
-        console.log('User cancelled biometric prompt');
+        throw new Error(result.error);
       }
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Unknown error');
+      }
     }
   };
 
@@ -82,6 +90,7 @@ export const TransactionDetailScreen: React.FunctionComponent<
           )}
         </View>
       ))}
+      <FixedPositionedError error={error} />
     </ScrollView>
   );
 };

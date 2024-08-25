@@ -4,9 +4,11 @@ import {ScrollView, StyleSheet} from 'react-native';
 import {Button, Text} from 'react-native-paper';
 import {AppScreenParamsList} from './App';
 import {rnBiometrics, useAuthStore} from '../stores/auth';
+import {FixedPositionedError} from './shared/fixed-positioned-error';
 
 export const AuthScreen: React.FunctionComponent<Props> = () => {
   const [, {authenticate}] = useAuthStore();
+  const [error, setError] = React.useState<string | undefined>();
 
   React.useEffect(() => {
     // For testing purpose only
@@ -23,9 +25,20 @@ export const AuthScreen: React.FunctionComponent<Props> = () => {
     try {
       await authenticate();
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Unknown error');
+      }
     }
   };
+
+  React.useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(undefined), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -40,6 +53,7 @@ export const AuthScreen: React.FunctionComponent<Props> = () => {
       <Button mode="contained" onPress={login}>
         Login
       </Button>
+      <FixedPositionedError error={error} />
     </ScrollView>
   );
 };

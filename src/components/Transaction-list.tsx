@@ -11,6 +11,7 @@ import {AppScreenParamsList} from './App';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Transaction, useTransactionStore} from '../stores/transaction';
 import {useAuthStore} from '../stores/auth';
+import {FixedPositionedError} from './shared/fixed-positioned-error';
 
 export const TransactionListScreen: React.FunctionComponent<Props> = props => {
   const {navigation} = props;
@@ -21,19 +22,33 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
   const [isAmountVisible, setIsAmountVisible] = React.useState(false);
   const [lastRefreshed, setLastRefreshed] = React.useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [error, setError] = React.useState<string | undefined>();
 
   React.useEffect(() => {
     getData();
   }, [lastRefreshed]);
+
+  React.useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(undefined), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const getData = async () => {
     try {
       setIsRefreshing(true);
       const transactions = await getTransactions();
       setTransactions(transactions);
+      throw new Error('Unknown error');
       setIsRefreshing(false);
     } catch (error) {
-      console.error(error);
+      setIsRefreshing(false);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Unknown error');
+      }
     }
   };
 
@@ -74,66 +89,73 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Unknown error');
+      }
     }
   };
 
   return (
-    <SectionList
-      sections={groupedTransactions}
-      keyExtractor={(item, index) => `${index}-${item.id}`}
-      renderSectionHeader={({section: {title}}) => (
-        <View style={styles.sectionHeader}>
-          <Text variant="titleMedium">{title}</Text>
-        </View>
-      )}
-      renderItem={({item}) => (
-        <TouchableWithoutFeedback
-          onPress={() =>
-            navigation.navigate('TransactionDetail', {
-              transaction: item,
-            })
-          }>
-          <View style={styles.item}>
-            <Text variant="titleSmall" numberOfLines={2} style={{flex: 1}}>
-              {item.description}
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-              <Text style={{marginLeft: 24, marginRight: 8}}>
-                RM{' '}
-                {isAmountVisible
-                  ? item.amount
-                  : Array.from({length: item.amount.toString().length}).join(
-                      '*',
-                    )}
-              </Text>
-              <IconButton
-                icon={!isAmountVisible ? 'eye-outline' : 'eye-off-outline'}
-                size={20}
-                onPress={toggleAmountVisibility}
-              />
-            </View>
+    <React.Fragment>
+      <SectionList
+        sections={groupedTransactions}
+        keyExtractor={(item, index) => `${index}-${item.id}`}
+        renderSectionHeader={({section: {title}}) => (
+          <View style={styles.sectionHeader}>
+            <Text variant="titleMedium">{title}</Text>
           </View>
-        </TouchableWithoutFeedback>
-      )}
-      contentContainerStyle={{
-        ...styles.container,
-        paddingBottom: insets.bottom,
-      }}
-      ListEmptyComponent={
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
-        </View>
-      }
-      stickySectionHeadersEnabled={false}
-      onRefresh={refreshData}
-      refreshing={isRefreshing}
-    />
+        )}
+        renderItem={({item}) => (
+          <TouchableWithoutFeedback
+            onPress={() =>
+              navigation.navigate('TransactionDetail', {
+                transaction: item,
+              })
+            }>
+            <View style={styles.item}>
+              <Text variant="titleSmall" numberOfLines={2} style={{flex: 1}}>
+                {item.description}
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{marginLeft: 24, marginRight: 8}}>
+                  RM{' '}
+                  {isAmountVisible
+                    ? item.amount
+                    : Array.from({length: item.amount.toString().length}).join(
+                        '*',
+                      )}
+                </Text>
+                <IconButton
+                  icon={!isAmountVisible ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  onPress={toggleAmountVisibility}
+                />
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        )}
+        contentContainerStyle={{
+          ...styles.container,
+          paddingBottom: insets.bottom,
+        }}
+        ListEmptyComponent={
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" />
+          </View>
+        }
+        stickySectionHeadersEnabled={false}
+        onRefresh={refreshData}
+        refreshing={isRefreshing}
+      />
+      <FixedPositionedError error={error} />
+    </React.Fragment>
   );
 };
 
