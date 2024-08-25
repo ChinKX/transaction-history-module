@@ -7,6 +7,7 @@ export const rnBiometrics = new ReactNativeBiometrics({
 
 export type AuthState = {
   status: 'unauthenticated' | 'authenticated' | 'inactive';
+  lastActivity?: number;
 };
 
 export type AuthAction = {
@@ -20,12 +21,15 @@ export type AuthAction = {
         error: string;
       }
   >;
+  setLastActivity: () => void;
   logout: () => void;
 };
 
 const AuthContext = React.createContext([
   {} as AuthState,
-  {} as AuthAction,
+  {
+    setLastActivity: () => {},
+  } as AuthAction,
 ] as const);
 
 export const AuthProvider: React.FunctionComponent<
@@ -33,7 +37,25 @@ export const AuthProvider: React.FunctionComponent<
 > = props => {
   const [state, setState] = React.useState<AuthState>({
     status: 'unauthenticated',
+    lastActivity: undefined,
   });
+
+  React.useEffect(() => {
+    if (state.status === 'authenticated') {
+      const timer = setTimeout(
+        () => setState(state => ({...state, status: 'inactive'})),
+        15000,
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [state.status, state.lastActivity]);
+
+  React.useEffect(() => {
+    if (state.status === 'inactive') {
+      const timer = setTimeout(() => logout(), 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.status]);
 
   const authenticate = async () => {
     const {success, error} = await rnBiometrics.simplePrompt({
@@ -43,7 +65,10 @@ export const AuthProvider: React.FunctionComponent<
       throw new Error(error);
     }
     if (success) {
-      setState(state => ({...state, status: 'authenticated'}));
+      setState(state => ({
+        ...state,
+        status: 'authenticated',
+      }));
       return;
     }
     throw new Error('User cancelled biometric prompt');
@@ -68,6 +93,17 @@ export const AuthProvider: React.FunctionComponent<
     };
   };
 
+  const setLastActivity = () => {
+    if (state.status === 'unauthenticated') {
+      return;
+    }
+    setState(state => ({
+      ...state,
+      status: 'authenticated',
+      lastActivity: Date.now(),
+    }));
+  };
+
   const logout = () => {
     setState(state => ({...state, status: 'unauthenticated'}));
   };
@@ -79,6 +115,7 @@ export const AuthProvider: React.FunctionComponent<
         {
           authenticate,
           simpleAuthenticate,
+          setLastActivity,
           logout,
         },
       ]}>

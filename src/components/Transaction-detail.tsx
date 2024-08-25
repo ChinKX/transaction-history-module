@@ -12,7 +12,7 @@ export const TransactionDetailScreen: React.FunctionComponent<
 > = props => {
   const {transaction} = props.route.params;
   const insets = useSafeAreaInsets();
-  const [, {simpleAuthenticate}] = useAuthStore();
+  const [, {simpleAuthenticate, setLastActivity}] = useAuthStore();
   const [isAmountVisible, setIsAmountVisible] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>();
 
@@ -49,7 +49,9 @@ export const TransactionDetailScreen: React.FunctionComponent<
       contentContainerStyle={{
         ...styles.container,
         paddingBottom: insets.bottom,
-      }}>
+      }}
+      onTouchStart={setLastActivity}
+      onScroll={setLastActivity}>
       {[
         {title: 'Description', content: transaction.description},
         {title: 'Type', content: transaction.type},

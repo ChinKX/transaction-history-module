@@ -16,7 +16,7 @@ import {FixedPositionedError} from './shared/fixed-positioned-error';
 export const TransactionListScreen: React.FunctionComponent<Props> = props => {
   const {navigation} = props;
   const insets = useSafeAreaInsets();
-  const [, {simpleAuthenticate}] = useAuthStore();
+  const [, {simpleAuthenticate, setLastActivity}] = useAuthStore();
   const {getTransactions} = useTransactionStore();
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [isAmountVisible, setIsAmountVisible] = React.useState(false);
@@ -152,6 +152,8 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
         stickySectionHeadersEnabled={false}
         onRefresh={refreshData}
         refreshing={isRefreshing}
+        onTouchStart={setLastActivity}
+        onScroll={setLastActivity}
       />
       <FixedPositionedError error={error} />
     </React.Fragment>
