@@ -8,14 +8,17 @@ import {name as appName} from './app.json';
 import {PaperProvider} from 'react-native-paper';
 import {NavigationContainer} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {AuthProvider} from './src/stores/auth';
 
 const Main = () => {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <PaperProvider>
-          <App />
-        </PaperProvider>
+        <AuthProvider>
+          <PaperProvider>
+            <App />
+          </PaperProvider>
+        </AuthProvider>
       </NavigationContainer>
     </SafeAreaProvider>
   );

@@ -1,12 +1,12 @@
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import * as React from 'react';
 import {ScrollView, StyleSheet} from 'react-native';
-import {Button} from 'react-native-paper';
+import {Button, Text} from 'react-native-paper';
 import {AppScreenParamsList} from './App';
-import { rnBiometrics } from '../stores/rn-biometrics';
+import {rnBiometrics, useAuthStore} from '../stores/auth';
 
-export const AuthScreen: React.FunctionComponent<Props> = props => {
-  const {navigation} = props;
+export const AuthScreen: React.FunctionComponent<Props> = () => {
+  const [, {authenticate}] = useAuthStore();
 
   React.useEffect(() => {
     // For testing purpose only
@@ -21,18 +21,7 @@ export const AuthScreen: React.FunctionComponent<Props> = props => {
 
   const login = async () => {
     try {
-      const {success, error} = await rnBiometrics.simplePrompt({
-        promptMessage: 'Log in with Biometrics',
-      });
-      if (error) {
-        throw new Error(error);
-      }
-      if (success) {
-        console.log('Successful biometrics provided');
-        navigation.navigate('TransactionList');
-      } else {
-        console.log('User cancelled biometric prompt');
-      }
+      await authenticate();
     } catch (error) {
       console.error(error);
     }
@@ -40,6 +29,14 @@ export const AuthScreen: React.FunctionComponent<Props> = props => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <Text
+        variant="titleLarge"
+        style={{
+          textAlign: 'center',
+          marginBottom: 48,
+        }}>
+        Login using biometrics to view transactions
+      </Text>
       <Button mode="contained" onPress={login}>
         Login
       </Button>

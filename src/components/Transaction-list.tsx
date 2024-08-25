@@ -6,16 +6,17 @@ import {
   View,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
-import {IconButton, Text} from 'react-native-paper';
-import {faker} from '@faker-js/faker';
+import {ActivityIndicator, IconButton, Text} from 'react-native-paper';
 import {AppScreenParamsList} from './App';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {rnBiometrics} from '../stores/rn-biometrics';
-import {Transaction} from '../stores/transaction';
+import {Transaction, useTransactionStore} from '../stores/transaction';
+import {useAuthStore} from '../stores/auth';
 
 export const TransactionListScreen: React.FunctionComponent<Props> = props => {
   const {navigation} = props;
   const insets = useSafeAreaInsets();
+  const [, {simpleAuthenticate}] = useAuthStore();
+  const {getTransactions} = useTransactionStore();
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [isAmountVisible, setIsAmountVisible] = React.useState(false);
   const [lastRefreshed, setLastRefreshed] = React.useState<number>(Date.now());
@@ -25,21 +26,15 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
     getData();
   }, [lastRefreshed]);
 
-  const getData = () => {
-    setIsRefreshing(true);
-    // Simulate network request
-    setTimeout(() => {
-      setTransactions(
-        Array.from({length: 20}).map<Transaction>(() => ({
-          id: faker.string.alphanumeric(),
-          description: faker.finance.transactionDescription(),
-          amount: parseFloat(faker.finance.amount()),
-          date: faker.date.recent(),
-          type: faker.helpers.arrayElement(['Credit', 'Debit']),
-        })),
-      );
+  const getData = async () => {
+    try {
+      setIsRefreshing(true);
+      const transactions = await getTransactions();
+      setTransactions(transactions);
       setIsRefreshing(false);
-    }, 2000);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const groupedTransactions = React.useMemo(
@@ -72,17 +67,11 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
         setIsAmountVisible(false);
         return;
       }
-      const {success, error} = await rnBiometrics.simplePrompt({
-        promptMessage: 'View transaction amount',
-      });
-      if (error) {
-        throw new Error(error);
-      }
-      if (success) {
-        console.log('Successful biometrics provided');
+      const result = await simpleAuthenticate();
+      if (result.type === 'success') {
         setIsAmountVisible(true);
       } else {
-        console.log('User cancelled biometric prompt');
+        throw new Error(result.error);
       }
     } catch (error) {
       console.error(error);
@@ -136,6 +125,11 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
         ...styles.container,
         paddingBottom: insets.bottom,
       }}
+      ListEmptyComponent={
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" />
+        </View>
+      }
       stickySectionHeadersEnabled={false}
       onRefresh={refreshData}
       refreshing={isRefreshing}
@@ -160,6 +154,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'lightgray',
     borderBottomWidth: 1,
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
 });
