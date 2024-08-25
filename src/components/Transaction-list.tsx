@@ -40,7 +40,6 @@ export const TransactionListScreen: React.FunctionComponent<Props> = props => {
       setIsRefreshing(true);
       const transactions = await getTransactions();
       setTransactions(transactions);
-      throw new Error('Unknown error');
       setIsRefreshing(false);
     } catch (error) {
       setIsRefreshing(false);
